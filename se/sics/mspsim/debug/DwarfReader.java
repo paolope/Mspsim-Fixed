@@ -39,6 +39,8 @@
 
 package se.sics.mspsim.debug;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import se.sics.mspsim.util.DebugInfo;
@@ -369,19 +371,30 @@ public class DwarfReader implements ELFDebug {
 
     /* Access methods for data... */
     public DebugInfo getDebugInfo(int address) {
-        for (int i = 0; i < lineInfo.size(); i++) {
-            LineData data = lineInfo.get(i);
-            int start = data.lineEntries[0].address;
-            int end = data.lineEntries[data.lineEntries.length - 1].address;
-            if (address <= end && address >= start) {
-                for (int j = 0; j < data.lineEntries.length; j++) {
-                    if (data.lineEntries[j].address >= address) {
-                        return new DebugInfo(data.lineEntries[j].line, "", data.sourceFiles[0], "* not available");
-                    }
-                }
-            }
-        }
-        return null;
+    	DebugInfo dbgInfo = null;
+//		try {
+    	for (int i = 0; i < lineInfo.size(); i++) {
+		    LineData data = lineInfo.get(i);
+		    int start = data.lineEntries[0].address;
+		    int end = data.lineEntries[data.lineEntries.length - 1].address;
+		    if (address <= end && address >= start) {
+		        for (int j = data.lineEntries.length -1 ; j >= 0; j--) {
+		            if (data.lineEntries[j].address <= address) {
+		            	    int lastSlash = data.sourceFiles[0].lastIndexOf("/");
+							String path = (lastSlash == -1) ? "" : data.sourceFiles[0].substring(0,lastSlash);
+							String file = (lastSlash == -1) ? data.sourceFiles[0] : data.sourceFiles[0].substring(lastSlash+1);
+							System.out.println(path);
+							System.out.println(file);
+		                    dbgInfo = new DebugInfo(data.lineEntries[j].line, path, file, "* not available");
+		                    break;
+		            }
+		        }
+		    }
+		}
+	//	} catch (IOException e) {
+	//		System.out.println("Could not get canonical file name");
+	//	}
+    	return dbgInfo;
     }
 
     public ArrayList<Integer> getExecutableAddresses() {
@@ -397,9 +410,8 @@ public class DwarfReader implements ELFDebug {
     public String[] getSourceFiles() {
         String[] sourceFilesArray = new String[lineInfo.size()];
         for (int i = 0; i < lineInfo.size(); i++) {
-          sourceFilesArray[i] = lineInfo.get(i).sourceFiles[0];
+				sourceFilesArray[i] = lineInfo.get(i).sourceFiles[0];
         }
-
         return sourceFilesArray;
     }
 }
