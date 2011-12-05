@@ -830,6 +830,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
      * be printed */ 
   }
 
+  int lastPCBeforeInterrupt;
   private int serviceInterrupt(int pc) {
     int pcBefore = pc;
     int spBefore = readRegister(SP);
@@ -853,6 +854,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       // store on stack - always move 2 steps (W) even if B.
       writeRegister(SP, sp = spBefore - 2);
       write(sp, pc, MODE_WORD);
+      lastPCBeforeInterrupt = pc;
 
       writeRegister(SP, sp = sp - 2);
       write(sp, (sr & 0x0fff) | ((pc & 0xf0000) >> 4), MODE_WORD);
@@ -898,13 +900,19 @@ public class MSP430Core extends Chip implements MSP430Constants {
     return pc;
   }
 
+  int pcDebug;
   /* returns true if any instruction was emulated - false if CpuOff */
   public int emulateOP(long maxCycles) throws EmulationException {
     //System.out.println("CYCLES BEFORE: " + cycles);
     int pc = readRegister(PC);
     long startCycles = cycles;
 
-    
+    if (pc >= MAX_MEM) {
+    	System.err.println("PC out of bounds! Current PC: "+ pc +" Earlier PC: "+pcDebug);
+    	System.err.println("Last PC before interrupt: "+lastPCBeforeInterrupt);
+    	throw new EmulationException("PC out of bounds!");
+    }
+    pcDebug = pc;
     // -------------------------------------------------------------------
     // Interrupt processing [after the last instruction was executed]
     // -------------------------------------------------------------------
